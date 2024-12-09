@@ -1,4 +1,5 @@
 from pyModbusTCP.client import ModbusClient
+import time
 
 # Connect to Siemens PLC (replace 'PLC_IP' with your actual PLC IP address)
 client = ModbusClient(host='192.168.3.50', port=502, auto_open=True)
@@ -22,9 +23,13 @@ seg_modbus_addresses = {
 temperature_register = parameter_modbus_addresses['Programmer.Run.PSP']  # Register for temperature
 humidity_register = seg_modbus_addresses['SEG_PTD_1[1]']  # Register for humidity
 
+# Max ramp rates
+MAX_TEMP_RAMP_RATE = 1  # Max ramp rate for temperature (1 degree per minute)
+MAX_HUMIDITY_RAMP_RATE = 1  # Max ramp rate for humidity (1 percent per minute)
+
 # Step 1: Read the current temperature and humidity from the PLC
-temperature = client.read_holding_registers(1,1)
-humidity = client.read_holding_registers(2,1)
+temperature = client.read_holding_registers(1, 1)
+humidity = client.read_holding_registers(2, 1)
 
 if temperature and humidity:
     current_temperature = temperature[0]
@@ -32,30 +37,70 @@ if temperature and humidity:
     print(f"Current Temperature: {current_temperature}")
     print(f"Current Humidity: {current_humidity}")
 
-    # Step 2: Prompt user for new temperature and humidity setpoints
+    # Step 2: Prompt user for new temperature and humidity setpoints and ramp rates
     try:
         new_temperature = int(input("Enter new temperature setpoint: "))
         new_humidity = int(input("Enter new humidity setpoint: "))
 
-        # Step 3: Write the new temperature setpoint to the PLC
-        print(f"Writing to temperature register at address {temperature_register} with value {new_temperature}")
-        if client.is_open and client.write_single_register(temperature_register, new_temperature):
-            print(f"Successfully updated temperature to {new_temperature}")
-        else:
-            print("Failed to update temperature")
+        # Ask for ramp rate in degrees per minute, but limit it to max allowed rate
+        temp_ramp_rate = float(input(f"Enter temperature ramp rate (degrees per minute, max {MAX_TEMP_RAMP_RATE}): "))
+        humidity_ramp_rate = float(input(f"Enter humidity ramp rate (percent per minute, max {MAX_HUMIDITY_RAMP_RATE}): "))
 
-        # Step 4: Write the new humidity setpoint to the PLC
-        print(f"Writing to humidity register at address {humidity_register} with value {new_humidity}")
-        if client.is_open and client.write_single_register(humidity_register, new_humidity):
-            print(f"Successfully updated humidity to {new_humidity}")
-        else:
-            print("Failed to update humidity")
+        # Ensure ramp rates do not exceed the maximum allowed
+        if temp_ramp_rate > MAX_TEMP_RAMP_RATE:
+            print(f"Warning: Temperature ramp rate cannot exceed {MAX_TEMP_RAMP_RATE} degrees per minute. Setting to {MAX_TEMP_RAMP_RATE}.")
+            temp_ramp_rate = MAX_TEMP_RAMP_RATE
+
+        if humidity_ramp_rate > MAX_HUMIDITY_RAMP_RATE:
+            print(f"Warning: Humidity ramp rate cannot exceed {MAX_HUMIDITY_RAMP_RATE} percent per minute. Setting to {MAX_HUMIDITY_RAMP_RATE}.")
+            humidity_ramp_rate = MAX_HUMIDITY_RAMP_RATE
+
+        # Print current ramp rates
+        print(f"Current Temperature Ramp Rate: {temp_ramp_rate} degrees per minute")
+        print(f"Current Humidity Ramp Rate: {humidity_ramp_rate} percent per minute")
+
+        # Step 3: Gradually change temperature
+        if current_temperature < new_temperature:
+            print(f"Ramp up temperature from {current_temperature} to {new_temperature}...")
+            while current_temperature < new_temperature:
+                current_temperature += temp_ramp_rate
+                if client.is_open:
+                    client.write_single_register(temperature_register, int(current_temperature))
+                print(f"Current Temperature: {current_temperature:.2f}")
+                time.sleep(60)  # Wait for one minute for the next increment
+        elif current_temperature > new_temperature:
+            print(f"Ramp down temperature from {current_temperature} to {new_temperature}...")
+            while current_temperature > new_temperature:
+                current_temperature -= temp_ramp_rate
+                if client.is_open:
+                    client.write_single_register(temperature_register, int(current_temperature))
+                print(f"Current Temperature: {current_temperature:.2f}")
+                time.sleep(60)  # Wait for one minute for the next increment
+
+        # Step 4: Gradually change humidity
+        if current_humidity < new_humidity:
+            print(f"Ramp up humidity from {current_humidity} to {new_humidity}...")
+            while current_humidity < new_humidity:
+                current_humidity += humidity_ramp_rate
+                if client.is_open:
+                    client.write_single_register(humidity_register, int(current_humidity))
+                print(f"Current Humidity: {current_humidity:.2f}")
+                time.sleep(60)  # Wait for one minute for the next increment
+        elif current_humidity > new_humidity:
+            print(f"Ramp down humidity from {current_humidity} to {new_humidity}...")
+            while current_humidity > new_humidity:
+                current_humidity -= humidity_ramp_rate
+                if client.is_open:
+                    client.write_single_register(humidity_register, int(current_humidity))
+                print(f"Current Humidity: {current_humidity:.2f}")
+                time.sleep(60)  # Wait for one minute for the next increment
+
+        print(f"Successfully updated temperature to {new_temperature} and humidity to {new_humidity}")
 
     except ValueError:
-        print("Invalid input. Please enter valid integers for temperature and humidity.")
+        print("Invalid input. Please enter valid integers or floats for temperature, humidity, and ramp rates.")
 else:
     print("Failed to read temperature or humidity from the PLC")
 
 # Close the connection
 client.close()
-
