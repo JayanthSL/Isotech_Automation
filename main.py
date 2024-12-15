@@ -1,40 +1,28 @@
-import time
-import logging
-from pyModbusTCP.client import ModbusClient
+from modbusserver import ModbusServerHandler
+from temperature_humidity_controller import TemperatureHumidityController
+from loggerconfig import logger_config
 from config import (PLC_IP, PLC_PORT, PARAMETER_MODBUS_ADDRESSES, SEG_MODBUS_ADDRESSES,
                     MIN_TEMPERATURE, MAX_TEMPERATURE, MIN_HUMIDITY, MAX_HUMIDITY,
                     MAX_TEMP_RAMP_RATE, MAX_HUMIDITY_RAMP_RATE)
 
-# Configure logging
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-file_handler = logging.FileHandler('isotech.logs')
-file_handler.setLevel(logging.DEBUG)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+# Configure logger
+logger = logger_config()
 
 # Connect to Siemens PLC
-client = ModbusClient(host=PLC_IP, port=PLC_PORT, auto_open=True)
+modbus_client = ModbusServerHandler(PLC_IP, PLC_PORT)
 
-temperature_register = PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP']
-humidity_register = SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]']
+# Create controller for temperature and humidity
+controller = TemperatureHumidityController(modbus_client, 
+                                           PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP'], 
+                                           SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]'])
 
-if not client.is_open:
+if not modbus_client.client.is_open:
     logger.error("Failed to connect to the PLC. Please check the connection.")
     exit()
 
 logger.info("Reading current temperature and humidity from the PLC.")
-temperature = client.read_holding_registers(temperature_register, 1)
-humidity = client.read_holding_registers(humidity_register, 1)
+temperature = modbus_client.read_register(PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP'])
+humidity = modbus_client.read_register(SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]'])
 
 if temperature and humidity:
     current_temperature = temperature[0]
@@ -65,27 +53,9 @@ if temperature and humidity:
             logger.error(f"Invalid humidity ramp rate. Must be > 0 and ≤ {MAX_HUMIDITY_RAMP_RATE}.")
             exit()
 
-        # Adjust temperature
-        if current_temperature != new_temperature:
-            logger.info(f"Adjusting temperature from {current_temperature} to {new_temperature}...")
-            while current_temperature != new_temperature:
-                step = temp_ramp_rate if current_temperature < new_temperature else -temp_ramp_rate
-                current_temperature += step
-                current_temperature = max(min(new_temperature, current_temperature), min(current_temperature, new_temperature))
-                client.write_single_register(temperature_register, int(current_temperature))
-                logger.info(f"Current Temperature: {current_temperature:.2f}")
-                time.sleep(60)
-
-        # Adjust humidity
-        if current_humidity != new_humidity:
-            logger.info(f"Adjusting humidity from {current_humidity} to {new_humidity}...")
-            while current_humidity != new_humidity:
-                step = humidity_ramp_rate if current_humidity < new_humidity else -humidity_ramp_rate
-                current_humidity += step
-                current_humidity = max(min(new_humidity, current_humidity), min(current_humidity, new_humidity))
-                client.write_single_register(humidity_register, int(current_humidity))
-                logger.info(f"Current Humidity: {current_humidity:.2f}")
-                time.sleep(60)
+        # Adjust temperature and humidity
+        current_temperature = controller.adjust_temperature(current_temperature, new_temperature, temp_ramp_rate)
+        current_humidity = controller.adjust_humidity(current_humidity, new_humidity, humidity_ramp_rate)
 
         logger.info(f"Successfully updated temperature to {new_temperature} and humidity to {new_humidity}.")
 
@@ -96,4 +66,4 @@ else:
     logger.error("Failed to read temperature or humidity from the PLC.")
 
 logger.info("Closing the connection to the PLC.")
-client.close()
+modbus_client.close_connection()
