@@ -1,6 +1,13 @@
 import logging
 
 def logger_config():
+    """
+    Configure and return a logger instance.
+
+    - Logs messages to a file ('isotech.logs') and the console.
+    - File logs include all levels (DEBUG and above).
+    - Console logs include INFO level and above.
+    """
     logger = logging.getLogger()
     if not logger.hasHandlers():
         logger.setLevel(logging.DEBUG)

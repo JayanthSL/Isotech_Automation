@@ -2,6 +2,10 @@
 PLC_IP = '192.168.3.50'
 PLC_PORT = 502
 
+# Modbus Start/Stop Addresses
+START_CHAMBER = 100 # Start Register
+STOP_CHAMBER = 101 # Stop Register
+
 # Register addresses
 PARAMETER_MODBUS_ADDRESSES = {
     'Programmer.Run.Mode': 23,
