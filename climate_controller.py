@@ -1,5 +1,5 @@
 import time
-from loggerconfig import logger_config
+from logger_setup import logger_config
 
 logger = logger_config()
 

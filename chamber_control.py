@@ -1,4 +1,4 @@
-from loggerconfig import logger_config
+from logger_setup import logger_config
 
 logger = logger_config()
 
@@ -21,12 +21,12 @@ class ChamberControl:
         """
         Sends a command to start the chamber.
         """
-        logger.info("Attempting to start the chamber...")
+        logger.info(f"Attempting to start the chamber...")
         try:
             self.client.write_register(self.start_register, 1)
-            logger.info("Chamber started successfully.")
+            logger.info(f"Chamber started successfully.")
         except Exception as e:
-            logger.error("Failed to start the chamber.")
+            logger.error(f"Failed to start the chamber.")
             logger.exception(e)
 
     def stop_chamber(self):
@@ -36,7 +36,7 @@ class ChamberControl:
         logger.info("Attempting to stop the chamber...")
         try:
             self.client.write_register(self.stop_register, 0)
-            logger.info("Chamber stopped successfully.")
+            logger.info(f"Chamber stopped successfully.")
         except Exception as e:
-            logger.error("Failed to stop the chamber.")
+            logger.error(f"Failed to stop the chamber.")
             logger.exception(e)
