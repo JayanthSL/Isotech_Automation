@@ -110,7 +110,8 @@ def temperature_humity_control():
 
         while True:
             try:
-                humidity_ramp_rate = float(input(f"Enter humidity ramp rate (percent per minute, max {MAX_HUMIDITY_RAMP_RATE}): "))
+                # humidity_ramp_rate = float(input(f"Enter humidity ramp rate (percent per minute, max {MAX_HUMIDITY_RAMP_RATE}): "))
+                humidity_ramp_rate = MAX_HUMIDITY_RAMP_RATE
                 if humidity_ramp_rate > MAX_HUMIDITY_RAMP_RATE or humidity_ramp_rate < MAX_HUMIDITY_RAMP_RATE:
                         logger.error(f"Invalid humidity ramp rate. Must be {MAX_HUMIDITY_RAMP_RATE}.")
                         print("Please try again.\n")
