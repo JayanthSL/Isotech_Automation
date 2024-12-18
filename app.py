@@ -144,22 +144,29 @@ def main():
         print("1. Start Chamber")
         print("2. Stop Chamber")
         print("3. Control Temperature and Humidity")
-        print("4. Exit")
+        print("4. help")
+        print("5. Exit")
+        
+        choice = input("Enter Your Choice: ").strip().lower()
 
-        choice = int(input("Enter Your Choise:"))
-
-        if choice == 1:
+        if choice == "1":  
             chamber_control.start_chamber()
-        elif choice == 2:
+        elif choice == "2":
             chamber_control.stop_chamber()
-        elif choice == 3:
+        elif choice == "3":
             temperature_humity_control()
-        elif choice == 4:
-            logger.info(f"Exiting program, Closing connection with PLC")
+        elif choice == "4" or choice == "help":  
+            print("Chamber Control And Monitoring System")
+            print("1. Start Chamber - Used to initialize and start the chamber operation.")
+            print("2. Stop Chamber - Used to safely stop the chamber operation.")
+            print("3. Control Temperature and Humidity - Adjust and monitor temperature and humidity levels.")
+        elif choice == "5" or choice == "q": 
+            logger.info("Exiting program, Closing connection with PLC")
             modbus_client.close_connection()
             break
         else:
-            logger.error(f"Invalid Choice, Please enter the Valid option")
+            logger.error("Invalid Choice, Please enter a valid option (1-4 or 'help').")
+
 
 if __name__ == "__main__":
     main()  
