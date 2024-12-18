@@ -1,0 +1,22 @@
+1) Automation control of the thermal chamber should be based on a configuration file
+2) The automation script should have a sanity check function in the beginning - to make sure the parameters defined in the configuration file are sensible- including temperatures, humidity, ramp rates etc (1 degree per minute)
+2.a) The script should continue only if the sanity check passes
+2.b) If the sanity check of the configuration file failed, the script should throw an error pointing to what parameter is at miss.
+3) Script should be class and module based
+4) Should add doc string to all APIs (HELP= Show possible commands)
+5) Instantiation of class should have 2 arguments:
+5.a) IP address
+5.b) Port number
+6) Each API should have dry and catch block
+Note: Each error code in Modbus reference should be sited in exceptions the code catches
+7) Enable log capture and store in a log file
+8) Automation should include the ability to perform the following:
+-- Start chamber
+-- Stop chamber
+-- Read temperature
+-- Write temperature
+-- Read humidity
+-- Write humidity
+-- Read ramp rate (based on temp/ humidity points and duration)
+-- Write ramp rate (or set sensible duration of ramp based on temp/ humidity points)
+
