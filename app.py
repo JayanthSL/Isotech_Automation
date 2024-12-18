@@ -2,9 +2,9 @@ from modbus_client import ModbusServerHandler
 from chamber_control import ChamberControl
 from climate_controller import TemperatureHumidityController
 from logger_setup import logger_config
-from settings import (PLC_IP, PLC_PORT, START_CHAMBER, STOP_CHAMBER, PARAMETER_MODBUS_ADDRESSES, SEG_MODBUS_ADDRESSES,
-                    MIN_TEMPERATURE, MAX_TEMPERATURE, MIN_HUMIDITY, MAX_HUMIDITY,
-                    MAX_TEMP_RAMP_RATE, MAX_HUMIDITY_RAMP_RATE)
+from config import (PLC_IP, PLC_PORT, START_CHAMBER, STOP_CHAMBER, PARAMETER_MODBUS_ADDRESSES, SEG_MODBUS_ADDRESSES,
+                    MIN_TEMPERATURE, MAX_TEMPERATURE, MIN_HUMIDITY, MAX_HUMIDITY_TEMP, MAX_HUMIDITY,
+                    MAX_TEMP_RAMP_RATE, MIN_TEMP_RAMP_RATE, MAX_HUMIDITY_RAMP_RATE)
 
 # Configure logger
 logger = logger_config()
@@ -20,9 +20,9 @@ controller = TemperatureHumidityController(modbus_client,
                                            PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP'], 
                                            SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]'])
 
-if not modbus_client.client.is_open:
-    logger.error("Failed to connect to the PLC. Please check the connection.")
-    exit()
+# if not modbus_client.client.is_open:
+    # logger.error("Failed to connect to the PLC. Please check the connection.")
+    # exit()
 
 def temperature_humity_control():
     """
@@ -55,29 +55,58 @@ def temperature_humity_control():
                 print("Please try again.\n")
 
         while True:
-            try:
-                new_humidity = int(input(f"Enter new humidity setpoint ({MIN_HUMIDITY} to {MAX_HUMIDITY}): "))
-                if not (MIN_HUMIDITY <= new_humidity <= MAX_HUMIDITY):
-                    logger.error(f"Humidity setpoint must be between {MIN_HUMIDITY} and {MAX_HUMIDITY}.")
-                    print("Please try again.\n")
-                    continue  # Loop back to re-enter humidity
-                break  # Exit loop if input is valid
-            except ValueError:
-                logger.error("Invalid input. Please enter a valid integer for humidity.")
-                print("Please try again.\n")
+            print(new_temperature, "new humidity")
+            if new_temperature < MIN_HUMIDITY or new_temperature > MAX_HUMIDITY_TEMP:
+                new_humidity = 0
+                break
+            else:
+                try:
+                    new_humidity = int(input(f"Enter new humidity setpoint ({MIN_HUMIDITY} to {MAX_HUMIDITY}): "))
+                    if not (MIN_HUMIDITY <= new_humidity <= MAX_HUMIDITY):
+                        print(new_humidity, "new humidity")
+                        logger.error(f"Humidity setpoint must be between {MIN_HUMIDITY} and {MAX_HUMIDITY}.")
+                        print("Please try again.\n")
+                        continue  # Loop back to re-enter humidity
+                    break  # Exit loop if input is valid
 
+                except ValueError:
+                    logger.error("Invalid input. Please enter a valid integer for humidity.")
+                    print("Please try again.\n")
 
         while True:
             try:
-                temp_ramp_rate = float(input(f"Enter temperature ramp rate (degrees per minute, max {MAX_TEMP_RAMP_RATE}): "))
-                if temp_ramp_rate > MAX_TEMP_RAMP_RATE or temp_ramp_rate < MAX_TEMP_RAMP_RATE:
-                    logger.error(f"Invalid temperature ramp rate. Must be {MAX_TEMP_RAMP_RATE}.")
+                # Ask user for the time taken to increase the temperature
+                time_minutes = float(input(f"Enter the time (in minutes) to increase temperature from {current_temperature} to {new_temperature}: "))
+                
+                if time_minutes <= 0:
+                    logger.error("Invalid time. Please enter a positive value greater than 0.")
                     print("Please try again.\n")
                     continue  # Loop back to the input field
+
+                # Calculate the ramp rate
+                temperature_change = new_temperature - current_temperature  # Change in temperature (10°C)
+                temp_ramp_rate = temperature_change / time_minutes  # Ramp rate (degrees per minute)
+                
+                print(temp_ramp_rate, "Hello")
+
+                temp_ramp_rates = abs(temp_ramp_rate)  # Converts the negative value to positive
+                print(temp_ramp_rates)
+
+                # Validate the ramp rate against the maximum allowed value
+                if temp_ramp_rates > MAX_TEMP_RAMP_RATE or temp_ramp_rates < MIN_TEMP_RAMP_RATE:
+                    logger.error(f"Calculated ramp rate ({temp_ramp_rate:.2f}°C/min) exceeds the maximum allowed rate of {MAX_TEMP_RAMP_RATE}°C/min.")
+                    print("Please enter a longer time duration.\n")
+                    continue  # Loop back to the input field
+
+                # Valid input and ramp rate
+                logger.info(f"Valid ramp rate calculated: {temp_ramp_rate:.2f}°C/min")
+                print(f"Ramp rate successfully set to {temp_ramp_rate:.2f}°C/min.")
                 break  # Exit loop when input is valid
+
             except ValueError:
                 logger.error("Invalid input. Please enter a numerical value.")
                 print("Please try again.\n")
+
 
         while True:
             try:
