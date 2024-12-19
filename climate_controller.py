@@ -1,4 +1,5 @@
 import time
+import threading
 from logger_setup import logger_config
 
 logger = logger_config()
@@ -19,6 +20,20 @@ class TemperatureHumidityController:
         self.client = modbus_client
         self.temp_register = temp_register
         self.humidity_register = humidity_register
+
+    def get_input_with_timeout(self,prompt, timeout):
+        new = [None]
+        
+        def input_thread():
+            new[0] = input(prompt)
+
+        thread = threading.Thread(target=input_thread)
+        thread.start()
+        thread.join(timeout)
+
+        if thread.is_alive():
+            thread.join(0)  # Ensure thread terminates
+        return new[0]
     
     def adjust_temperature(self, current_temperature, new_temperature, temp_ramp_rate):
         """
@@ -41,6 +56,9 @@ class TemperatureHumidityController:
             logger.info(f"Adjusting temperature from {current_temperature} to {new_temperature}...")
             while current_temperature != new_temperature:
                 time.sleep(60)
+                new = self.get_input_with_timeout("Press q to exit the loop:", 2)
+                if new == "q":
+                    break
                 step = temp_ramp_rate 
                 current_temperature += step
                 print(current_temperature, "Current Temp")
