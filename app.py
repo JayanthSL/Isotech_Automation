@@ -24,6 +24,20 @@ controller = TemperatureHumidityController(modbus_client,
     # logger.error("Failed to connect to the PLC. Please check the connection.")
     # exit()
 
+def current_temp_humidity():
+    logger.info("Reading current temperature and humidity from the PLC.")
+    temperature = modbus_client.read_register(PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP'])
+    humidity = modbus_client.read_register(SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]'])
+    if temperature and humidity:
+        current_temperature = temperature[0]
+        current_humidity = humidity[0]
+        logger.info(f"Current Temperature: {current_temperature}")
+        logger.info(f"Current Humidity: {current_humidity}")
+    else:
+        logger.error("Failed to read temperature or humidity from the PLC.")
+        return main()
+
+
 def temperature_humity_control():
     """
     Controls temperature and humidity for the chamber.
@@ -107,24 +121,9 @@ def temperature_humity_control():
                 logger.error("Invalid input. Please enter a numerical value.")
                 print("Please try again.\n")
 
-
-        while True:
-            try:
-                # humidity_ramp_rate = float(input(f"Enter humidity ramp rate (percent per minute, max {MAX_HUMIDITY_RAMP_RATE}): "))
-                humidity_ramp_rate = MAX_HUMIDITY_RAMP_RATE
-                if humidity_ramp_rate > MAX_HUMIDITY_RAMP_RATE or humidity_ramp_rate < MAX_HUMIDITY_RAMP_RATE:
-                        logger.error(f"Invalid humidity ramp rate. Must be {MAX_HUMIDITY_RAMP_RATE}.")
-                        print("Please try again.\n")
-                        continue  # Loop back to the input field
-                break  # Exit loop when input is valid
-            except ValueError:
-                logger.error("Invalid input. Please enter a numerical value.")
-                print("Please try again.\n")
-
-
         # Adjust temperature and humidity
         current_temperature = controller.adjust_temperature(current_temperature, new_temperature, temp_ramp_rate)
-        current_humidity = controller.adjust_humidity(current_humidity, new_humidity, humidity_ramp_rate)
+        current_humidity = controller.adjust_humidity(current_humidity, new_humidity)
 
         logger.info(f"Successfully updated temperature to {new_temperature} and humidity to {new_humidity}.")
         return main()
@@ -143,9 +142,10 @@ def main():
         print("Chamber Control And Monitoring System")
         print("1. Start Chamber")
         print("2. Stop Chamber")
-        print("3. Control Temperature and Humidity")
-        print("4. help")
-        print("5. Exit")
+        print("3. Display Current Temperature and Humidity")
+        print("4. Control Temperature and Humidity")
+        print("5. Help")
+        print("6. Exit")
         
         choice = input("Enter Your Choice: ").strip().lower()
 
@@ -154,13 +154,16 @@ def main():
         elif choice == "2":
             chamber_control.stop_chamber()
         elif choice == "3":
+            current_temp_humidity()
+        elif choice == "4":
             temperature_humity_control()
-        elif choice == "4" or choice == "help":  
+        elif choice == "5" or choice == "help":  
             print("Chamber Control And Monitoring System")
             print("1. Start Chamber - Used to initialize and start the chamber operation.")
             print("2. Stop Chamber - Used to safely stop the chamber operation.")
-            print("3. Control Temperature and Humidity - Adjust and monitor temperature and humidity levels.")
-        elif choice == "5" or choice == "q": 
+            print("3. Display Current Temperature and Humidity - Shows the current temperature and humidit levels")
+            print("4. Control Temperature and Humidity - Adjust and monitor temperature and humidity levels.")
+        elif choice == "6" or choice == "q": 
             logger.info("Exiting program, Closing connection with PLC")
             modbus_client.close_connection()
             break
