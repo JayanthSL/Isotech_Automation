@@ -1,4 +1,8 @@
 from logger_setup import logger_config
+from modbus_client import ModbusServerHandler
+from config import (PLC_IP, PLC_PORT, START_CHAMBER, STOP_CHAMBER)
+
+modbus_client = ModbusServerHandler(PLC_IP, PLC_PORT)
 
 logger = logger_config()
 
@@ -22,21 +26,42 @@ class ChamberControl:
         Sends a command to start the chamber.
         """
         logger.info(f"Attempting to start the chamber...")
-        try:
-            self.client.write_register(self.start_register, 1)
-            logger.info(f"Chamber started successfully.")
-        except Exception as e:
-            logger.error(f"Failed to start the chamber.")
-            logger.exception(e)
+        start = modbus_client.read_register(START_CHAMBER)
+        if start:
+            start2 = start[0]
+            logger.info({start2})
+            while True:
+                try:
+                    modbus_client.write_register(START_CHAMBER, 1)
+                    logger.info(f"Chamber started successfully.")
+                except Exception as e:
+                    logger.error(f"Failed to start the chamber.")
+                    logger.exception(e)
+        else:
+            logger.error("Error")
+        # try:
+        #     # modbus_client.read_register(START_CHAMBER)
+
+        #     logger.info(f"Chamber started successfully.")
+        # except Exception as e:
+        #     logger.error(f"Failed to start the chamber.")
+        #     logger.exception(e)
 
     def stop_chamber(self):
         """
         Sends a command to stop the chamber.
         """
         logger.info("Attempting to stop the chamber...")
-        try:
-            self.client.write_register(self.stop_register, 0)
-            logger.info(f"Chamber stopped successfully.")
-        except Exception as e:
-            logger.error(f"Failed to stop the chamber.")
-            logger.exception(e)
+        start3 = modbus_client.read_register(STOP_CHAMBER)
+        if start3:
+            start4 = start3[0]
+            logger.info({start4})    
+            while True:    
+                try:
+                    self.client.write_register(self.stop_register, 0)
+                    logger.info(f"Chamber stopped successfully.")
+                except Exception as e:
+                    logger.error(f"Failed to stop the chamber.")
+                    logger.exception(e)
+        else:
+            logger.error(f"Error")

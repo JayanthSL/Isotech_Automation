@@ -48,13 +48,13 @@ def temperature_humity_control():
     logger.info("Reading current temperature and humidity from the PLC.")
     temperature = modbus_client.read_register(PARAMETER_MODBUS_ADDRESSES['Programmer.Run.PSP'])
     humidity = modbus_client.read_register(SEG_MODBUS_ADDRESSES['SEG_PTD_1[1]'])
+    start = modbus_client.read_register(START_CHAMBER)
 
-    if temperature and humidity:
+    if temperature and humidity and start:
         current_temperature = temperature[0]
         current_humidity = humidity[0]
         logger.info(f"Current Temperature: {current_temperature}")
         logger.info(f"Current Humidity: {current_humidity}")
-
         
         while True:
             try:
